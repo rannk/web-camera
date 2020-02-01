@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+    <title>face_detect</title>
+    <script src="js/jquery.js"></script>
+    <script src="js/modal.js"></script>
+</head>
+<body>
+<style>
+    #card_line {
+        position: absolute;
+        left: 155px;
+        top: 100px;
+        height: 120px;
+        width: 190px;
+        background: #cccccc;
+        z-index: 99;
+        opacity: 0.5;
+        border:solid 1px #f7dd8c;
+    }
+    #video {
+        position: absolute;
+        left: 0;
+    }
+    #snap {
+        position: absolute;
+        z-index: 99;
+        top: 400px;
+        width: 100px;
+        height: 100px;
+        left:200px;
+    }
+    #myModal {
+        min-width: 100px;
+        min-height: 100px;
+        background: #fff;
+        border:solid 1px #f7dd8c;
+        text-align: center;
+        padding-top: 20px;
+    }
+</style>
+<input type="button" title="Open Camera" value="Open Camera1" onclick="getMedia()" />
+<input type="button" title="Camera" value="Switch to normal Camera" id="camera_op" onclick="jump()" />
+<div style="position: absolute" id="video_div">
+    <video webkit-playsinline="true" playsinline="true" id="video" width="500px" height="500px" autoplay="autoplay"></video>
+    <div id="card_line"></div>
+    <button id="snap" onclick="takePhoto()">Take Photo</button>
+</div>
+
+<div id="myModal" class="modal" style="display: none">
+    Loading...
+</div>
+
+<canvas id="canvas" width="500px" height="500px" style="display: none" ></canvas>
+<input type="hidden" id="output_img">
+
+<script>
+    let left_mv = ($(window).width()-500)/2;
+    let fm = "";
+    $("#video_div").css("left", left_mv + "px");
+    //获得video摄像头区域
+    let video = document.getElementById("video");
+    if(getUrlParam("camera") != "normal") {
+        fm = "user";
+        $("#camera_op").val("Switch to normal Camera");
+    }else {
+        $("#camera_op").val("Switch to User Camera");
+    }
+
+    function jump() {
+        video = null;
+        if(getUrlParam("camera") != "normal") {
+            window.location.href=window.location.origin + "?camera=normal";
+        }else {
+            window.location.href=window.location.origin
+        }
+    }
+    function getMedia() {
+        let constraints = {
+            video: {facingMode: fm, width: 500, height: 500},
+            audio: false
+        };
+
+        let promise = navigator.mediaDevices.getUserMedia(constraints);
+        promise.then(function (MediaStream) {
+            video.srcObject = MediaStream;
+            //video.play();
+        }).catch(function (PermissionDeniedError) {
+            console.log(PermissionDeniedError);
+            alert("please close your browser and open again")
+        })
+    }
+
+    function takePhoto() {
+        //获得Canvas对象
+        let canvas = document.getElementById("canvas");
+        let ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        $("#myModal").html("loading...");
+        $("#myModal").modal("show");
+        $.ajax({
+            type : "POST",
+            url : "capt_image.php",
+            data : {
+                img_content:canvas.toDataURL("image/png")
+            },
+            success : function(result) {
+                $("#myModal").html(result)
+            },
+            error : function(e){
+                console.log(e.status);
+                console.log(e.responseText);
+            }
+        });
+
+    }
+
+    function getUrlParam(name) {
+        var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+        var r = window.location.search.substr(1).match(reg);  //匹配目标参数
+        if (r != null) return unescape(r[2]); return null; //返回参数值
+    }
+
+</script>
+</body>
+</html>
